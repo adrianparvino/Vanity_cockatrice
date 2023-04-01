@@ -1,0 +1,4 @@
+(executable
+ (public_name vanity_cockatrice)
+ (name main)
+ (libraries vanity_cockatrice))
