@@ -12,6 +12,11 @@ bug-reports: "https://github.com/username/reponame/issues"
 depends: [
   "ocaml"
   "dune" {>= "3.7"}
+  "digestif"
+  "re"
+  "digestif"
+  "domainslib"
+  "lockfree"
   "odoc" {with-doc}
 ]
 build: [

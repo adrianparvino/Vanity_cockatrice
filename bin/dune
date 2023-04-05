@@ -1,4 +1,16 @@
+(rule
+ (targets oracle_j.ml
+          oracle_j.mli)
+ (deps    oracle.atd)
+ (action  (run atdgen -j -j-std %{deps})))
+
+(rule
+ (targets oracle_t.ml
+          oracle_t.mli)
+ (deps    oracle.atd)
+ (action  (run atdgen -t %{deps})))
+
 (executable
  (public_name vanity_cockatrice)
  (name main)
- (libraries vanity_cockatrice))
+ (libraries vanity_cockatrice domainslib yojson atdgen lockfree))

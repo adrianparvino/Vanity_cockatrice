@@ -1,2 +1,3 @@
 (library
- (name vanity_cockatrice))
+ (name vanity_cockatrice)
+ (libraries re digestif))

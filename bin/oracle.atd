@@ -1,0 +1,2 @@
+type names = string list
+

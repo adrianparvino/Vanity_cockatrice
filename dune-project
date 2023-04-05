@@ -19,7 +19,7 @@
  (name vanity_cockatrice)
  (synopsis "A short synopsis")
  (description "A longer description")
- (depends ocaml dune)
+ (depends ocaml dune digestif re digestif domainslib lockfree)
  (tags
   (topics "to describe" your project)))
 
