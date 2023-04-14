@@ -1,3 +1,4 @@
 (library
  (name vanity_cockatrice)
- (libraries re digestif))
+ (modules_without_implementation deck vanity_cockatrice)
+ (libraries re digestif.c))
