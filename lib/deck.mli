@@ -18,3 +18,4 @@ module type Deck = sig
 end
 
 module Simple = Deck__simple
+module CachedMain = Deck__cached__main
