@@ -21,9 +21,7 @@ module type Parser = sig
   val parse : string -> t
 end
 
-module MTGAParser : sig
-  val parse : string -> t
-end = struct
+module MTGAParser : Parser = struct
   let regex =
     let open Re in
     let count = seq [ group (rep1 digit); rep1 space ] in
