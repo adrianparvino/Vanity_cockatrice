@@ -140,24 +140,51 @@ end = struct
     base32 ctx
 
   let rec hash_sideboard (ctx : SHA1.ctx) maindeck sideboard : string =
-    let rec prepare_sideboard k = function
-      | [] -> k []
-      | (s, n) :: sb ->
-          let rec go k = function
-            | 0 -> k
-            | n -> go (fun xs -> k (s :: xs)) (n - 1)
+    let sep = ";SB:" in
+    let nsep = String.length sep in
+    let rec blit_sideboard dst pos = function
+      | [] -> dst
+      | (s, n) :: ss ->
+          let start = pos in
+          let len = String.length s in
+          String.unsafe_blit sep 0 dst pos nsep;
+          let pos = pos + nsep in
+          String.unsafe_blit s 0 dst pos len;
+          let pos = pos + len in
+
+          let rec go pos stencil remaining =
+            if remaining < stencil then (
+              Bytes.unsafe_blit dst start dst pos remaining;
+              pos + remaining)
+            else (
+              Bytes.unsafe_blit dst start dst pos stencil;
+              go (pos + stencil) (stencil + stencil) (remaining - stencil))
           in
-          let k = go k n in
-          prepare_sideboard k sb
+          let pos = go pos (nsep + len) ((n - 1) * (nsep + len)) in
+
+          if List.length ss != 0 then blit_sideboard dst pos ss
+          else (
+            assert (Bytes.length dst == pos);
+            dst)
     in
+    let cards = StringMap.bindings sideboard in
+    let count, length =
+      List.fold_left
+        (fun (count, length) (s, n) ->
+          (count + n, length + (n * String.length s)))
+        (0, 0) cards
+    in
+    let length = length + (count * nsep) in
+    let cached_sideboard = Bytes.create length in
     let cached_sideboard =
-      sideboard |> StringMap.bindings |> prepare_sideboard (String.concat ";SB:")
+      (blit_sideboard [@inlined]) cached_sideboard 0 cards
     in
-    match cached_sideboard with
-    | "" -> hash_maindeck ctx maindeck
-    | sb ->
-        let sb = "SB:" ^ sb in
-        let ctx = SHA1.feed_string ctx sb in
+    match count with
+    | 0 -> hash_maindeck ctx maindeck
+    | _ ->
+        let ctx =
+          SHA1.feed_bytes ctx ~off:1 ~len:(length - 1) cached_sideboard
+        in
         hash_maindeck_leading ctx maindeck
 
   let hash deck =
