@@ -164,24 +164,19 @@ end = struct
               go (pos + stencil) (stencil + stencil) (remaining - stencil))
           in
           let pos = go pos (nsep + len) ((n - 1) * (nsep + len)) in
-          if List.length ss != 0 then blit_sideboard dst pos ss
-          else (
-            assert (Bytes.length dst == pos);
-            dst)
+          blit_sideboard dst pos ss
     in
     let cards = StringMap.bindings sideboard in
-    let count, length =
+    let length =
       List.fold_left
-        (fun (count, length) (s, n) ->
-          (count + n, length + (n * String.length s)))
-        (0, 0) cards
+        (fun length (s, n) -> length + (n * (nsep + String.length s)))
+        0 cards
     in
-    let length = length + (count * nsep) in
     let cached_sideboard = Bytes.create length in
     let cached_sideboard =
       (blit_sideboard [@inlined]) cached_sideboard 0 cards
     in
-    match count with
+    match length with
     | 0 -> hash_maindeck ctx maindeck
     | _ ->
         let ctx =
