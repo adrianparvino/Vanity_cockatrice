@@ -199,15 +199,14 @@ module NonLoggingParallelMiner : Miner = struct
 
     let pop { names; base; counter } =
       let i = Atomic.fetch_and_add counter 1 in
-      match i with
-      | -1 -> None
-      | i ->
-          let i, j = (i mod Array.length names, i / Array.length names) in
-          Some (Deck.add_sideboard names.(i) base.(j))
+      if i < 0 then None
+      else
+        let i, j = (i mod Array.length names, i / Array.length names) in
+        Some (Deck.add_sideboard names.(i) base.(j))
 
     let finish { counter } =
       let i = Atomic.get counter in
-      Atomic.compare_and_set counter i (-1)
+      Atomic.compare_and_set counter i (-16)
   end
 
   type t = { finished : bool Atomic.t; domains : Deck.t option Domain.t list }
