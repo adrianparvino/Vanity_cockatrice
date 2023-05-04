@@ -142,13 +142,16 @@ end = struct
   let rec hash_sideboard (ctx : SHA1.ctx) maindeck sideboard : string =
     let sep = ";SB:" in
     let nsep = String.length sep in
+    let[@inline always] blit_sep dst pos =
+      Bytes.set_int32_be dst pos 0x3B53423Al;
+      pos + 4
+    in
     let rec blit_sideboard dst pos = function
       | [] -> dst
       | (s, n) :: ss ->
           let start = pos in
           let len = String.length s in
-          String.unsafe_blit sep 0 dst pos nsep;
-          let pos = pos + nsep in
+          let pos = blit_sep dst pos in
           String.unsafe_blit s 0 dst pos len;
           let pos = pos + len in
 
@@ -161,7 +164,6 @@ end = struct
               go (pos + stencil) (stencil + stencil) (remaining - stencil))
           in
           let pos = go pos (nsep + len) ((n - 1) * (nsep + len)) in
-
           if List.length ss != 0 then blit_sideboard dst pos ss
           else (
             assert (Bytes.length dst == pos);
