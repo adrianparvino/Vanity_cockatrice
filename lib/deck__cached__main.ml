@@ -155,14 +155,6 @@ end = struct
       String.unsafe_blit s 0 scratch pos len;
       let pos = pos + len in
 
-      let pos =
-        if n >= 2 then (
-          let pos = blit_sep scratch pos in
-          String.unsafe_blit s 0 scratch pos len;
-          pos + len)
-        else pos
-      in
-
       let rec go pos remaining stencil =
         match remaining with
         | 0 -> ()
