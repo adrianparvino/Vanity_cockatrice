@@ -13,3 +13,4 @@ val add_sideboard: string -> t -> t
 val popped_sideboard: t -> t list
 
 val hash : t -> String.t 
+val hash_bytes : t -> bytes -> String.t

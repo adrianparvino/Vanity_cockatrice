@@ -210,7 +210,7 @@ module NonLoggingParallelMiner : Miner = struct
 
   type t = { finished : bool Atomic.t; domains : Deck.t option Domain.t list }
 
-  let rec mine ~tasks ~finished ~prefix () =
+  let rec mine ~scratch ~tasks ~finished ~prefix () =
     match Tasks.pop tasks with
     | None -> None
     | Some deck -> (
@@ -218,19 +218,24 @@ module NonLoggingParallelMiner : Miner = struct
           names
           |> List.find_map (fun card ->
                  let deck = deck |> Deck.add_sideboard card in
-                 let hash = Deck.hash deck in
+                 let hash = Deck.hash_bytes deck scratch in
 
                  if String.starts_with ~prefix hash && Tasks.finish tasks then
                    Some deck
                  else None)
         in
-        match result with None -> mine ~tasks ~finished ~prefix () | x -> x)
+        match result with
+        | None -> mine ~scratch ~tasks ~finished ~prefix ()
+        | x -> x)
 
   let run prefix =
     let finished = Atomic.make false in
     let tasks = Tasks.make (Array.of_list names) deck in
     let domains =
-      List.init 16 (fun _ -> Domain.spawn (mine ~tasks ~finished ~prefix))
+      (List.init [@inlined never]) 16 (fun _ ->
+          Domain.spawn
+            (let scratch = Bytes.create 2048 in
+             mine ~scratch ~tasks ~finished ~prefix))
     in
     { finished; domains }
 

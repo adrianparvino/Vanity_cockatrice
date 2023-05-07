@@ -111,6 +111,7 @@ let popped_sideboard ({ sideboard; _ } as deck) =
 
 module Hash : sig
   val hash : t -> string
+  val hash_bytes : t -> bytes -> string
 end = struct
   module SHA1 = Digestif.SHA1
 
@@ -139,54 +140,64 @@ end = struct
     let ctx = SHA1.feed_string ctx cached_maindeck in
     base32 ctx
 
-  let rec hash_sideboard (ctx : SHA1.ctx) maindeck sideboard : string =
+  let rec hash_sideboard (ctx : SHA1.ctx) scratch maindeck sideboard : string =
     let sep = ";SB:" in
     let nsep = String.length sep in
     let[@inline always] blit_sep dst pos =
-      Bytes.set_int32_be dst pos 0x3B53423Al;
+      (Bytes.set_int32_be [@inlined]) dst pos 0x3B53423Al;
       pos + 4
     in
-    let rec blit_sideboard dst pos = function
-      | [] -> dst
-      | (s, n) :: ss ->
-          let start = pos in
-          let len = String.length s in
-          let pos = blit_sep dst pos in
-          String.unsafe_blit s 0 dst pos len;
-          let pos = pos + len in
+    let[@inline never] blit_sideboard s n pos =
+      let len = String.length s in
+      let start = pos in
+      let last = start + (n * (nsep + len)) in
+      let pos = blit_sep scratch pos in
+      String.unsafe_blit s 0 scratch pos len;
+      let pos = pos + len in
 
-          let rec go pos stencil remaining =
-            if remaining < stencil then (
-              Bytes.unsafe_blit dst start dst pos remaining;
-              pos + remaining)
-            else (
-              Bytes.unsafe_blit dst start dst pos stencil;
-              go (pos + stencil) (stencil + stencil) (remaining - stencil))
-          in
-          let pos = go pos (nsep + len) ((n - 1) * (nsep + len)) in
-          blit_sideboard dst pos ss
+      let pos =
+        if n >= 2 then (
+          let pos = blit_sep scratch pos in
+          String.unsafe_blit s 0 scratch pos len;
+          pos + len)
+        else pos
+      in
+
+      let rec go pos remaining stencil =
+        match remaining with
+        | 0 -> ()
+        | remaining when remaining < stencil ->
+            Bytes.unsafe_blit scratch start scratch pos remaining
+        | remaining ->
+            Bytes.unsafe_blit scratch start scratch pos stencil;
+            go (pos + stencil) (remaining - stencil) (stencil + stencil)
+      in
+      go pos (last - pos) (pos - start);
+      last
     in
-    let cards = StringMap.bindings sideboard in
-    let length =
-      List.fold_left
-        (fun length (s, n) -> length + (n * (nsep + String.length s)))
-        0 cards
-    in
-    let cached_sideboard = Bytes.create length in
-    let cached_sideboard =
-      (blit_sideboard [@inlined]) cached_sideboard 0 cards
-    in
+    let length = StringMap.fold blit_sideboard sideboard 0 in
     match length with
     | 0 -> hash_maindeck ctx maindeck
     | _ ->
-        let ctx =
-          SHA1.feed_bytes ctx ~off:1 ~len:(length - 1) cached_sideboard
-        in
+        let ctx = SHA1.feed_bytes ctx ~off:1 ~len:(length - 1) scratch in
         hash_maindeck_leading ctx maindeck
 
   let hash deck =
     let ctx = SHA1.empty in
-    hash_sideboard ctx deck.cached_maindeck deck.sideboard
+    let sideboard = StringMap.bindings deck.sideboard in
+    let length =
+      List.fold_left
+        (fun length (s, n) -> length + (n * (4 + String.length s)))
+        0 sideboard
+    in
+    let scratch = Bytes.create length in
+
+    hash_sideboard ctx scratch deck.cached_maindeck deck.sideboard
+
+  let hash_bytes deck scratch =
+    let ctx = SHA1.empty in
+    (hash_sideboard [@inlined]) ctx scratch deck.cached_maindeck deck.sideboard
 end
 
 let hash = Hash.hash
+let[@inlined never] hash_bytes = Hash.hash_bytes
