@@ -2,4 +2,4 @@
  (dev
   (ocamlopt_flags (:standard)))
  (release
-  (ocamlopt_flags (:standard -O3))))
+  (ocamlopt_flags (:standard -O3 -unbox-closures -inline-max-depth 4 -inline-max-unroll 2 ))))
