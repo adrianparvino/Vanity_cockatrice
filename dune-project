@@ -15,6 +15,8 @@
 
 (documentation https://url/to/documentation)
 
+(map_workspace_root false)
+
 (package
  (name vanity_cockatrice)
  (synopsis "A short synopsis")
