@@ -3,6 +3,7 @@
 #include <endian.h>
 #include <stdint.h>
 #include <x86intrin.h>
+#include <string.h>
 
 CAMLprim value vanity_cockatrice_base32(value dest, value src) {
   char *dest_c = Bytes_val(dest);
@@ -42,4 +43,25 @@ CAMLprim value vanity_cockatrice_base32(value dest, value src) {
   _mm_storeu_si64((__m128i_u *) dest_c, x);
 
   return Val_unit;
+}
+
+CAMLprim value vanity_cockatrice_broadcast(value scratch, value s, intnat n, intnat pos) {
+  char *scratch_c = Bytes_val(scratch);
+  char *s_c = Bytes_val(s);
+  int len = caml_string_length(s);
+
+  char *start = scratch_c + pos;
+
+  scratch_c[pos++] = ';';
+  scratch_c[pos++] = 'S';
+  scratch_c[pos++] = 'B';
+  scratch_c[pos++] = ':';
+
+  memcpy(scratch_c + pos, s_c, len);
+  pos += len;
+
+  char *write = scratch_c + pos;
+  __asm__ __volatile__ ( "rep movsb" : "+D" (write) : "S" (start), "c" ((n - 1)*(len + 4)) : "memory" );
+
+  return Val_int(write - scratch_c);
 }
