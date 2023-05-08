@@ -115,21 +115,15 @@ module Hash : sig
 end = struct
   module SHA1 = Digestif.SHA1
 
+  external base32_c : bytes -> string -> unit = "vanity_cockatrice_base32" [@@noalloc]
+
   let base32 (ctx : SHA1.ctx) =
     let digest = SHA1.get ctx in
-    let alphabet = "0123456789abcdefghijklmnopqrstuvwxyz" in
     let bytes = SHA1.to_raw_string digest in
-    let word = Int64.(shift_right_logical (String.get_int64_be bytes 0) 24) in
     let buffer = Bytes.create 8 in
-    let rec go word = function
-      | -1 -> Bytes.unsafe_to_string buffer
-      | n ->
-          let i = Int64.to_int word land 0x1F in
-          Bytes.set buffer n alphabet.[i];
-          let word' = Int64.shift_right_logical word 5 in
-          go word' (n - 1)
-    in
-    (go [@unroll 8]) word 7
+    base32_c buffer bytes;
+    let str = Bytes.unsafe_to_string buffer in
+    str
 
   let rec hash_maindeck_leading (ctx : SHA1.ctx) cached_maindeck : string =
     let ctx = SHA1.feed_string ctx ";" in

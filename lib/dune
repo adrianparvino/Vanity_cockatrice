@@ -1,4 +1,9 @@
 (library
  (name vanity_cockatrice)
  (modules_without_implementation deck vanity_cockatrice)
+ (foreign_stubs
+  (language c)
+  (names accel)
+  (flags
+   (:standard -O3 -msse -msse2 -mssse3)))
  (libraries re digestif.c))
