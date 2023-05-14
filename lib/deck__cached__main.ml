@@ -116,7 +116,7 @@ end = struct
   module SHA1 = Digestif.SHA1
 
   external base32_c : bytes -> string -> unit = "vanity_cockatrice_base32" [@@noalloc]
-  external broadcast_c : bytes -> string -> (int [@untagged]) -> (int [@untagged]) -> int = "vanity_cockatrice_broadcast" "vanity_cockatrice_broadcast" [@@noalloc]
+  external broadcast_c : bytes -> (int [@untagged]) -> (int [@untagged]) -> (int [@untagged]) -> int = "vanity_cockatrice_broadcast" "vanity_cockatrice_broadcast" [@@noalloc]
 
   let base32 (ctx : SHA1.ctx) =
     let digest = SHA1.get ctx in
@@ -143,8 +143,17 @@ end = struct
       pos + 4
     in
     let blit_sideboard s n pos =
-      let pos' = broadcast_c scratch s n pos in
-      pos'
+      let len = String.length s in
+      let pos = blit_sep scratch pos in
+      String.unsafe_blit s 0 scratch pos len;
+      let pos = pos + len in
+      let pos = if n > 1 then
+        let pos = blit_sep scratch pos in
+        String.unsafe_blit s 0 scratch pos len;
+        pos + len
+      else pos in
+      let pos = if n > 2 then broadcast_c scratch pos len n else pos in
+      pos
     in
     let length = StringMap.fold blit_sideboard sideboard 0 in
     match length with

@@ -45,23 +45,12 @@ CAMLprim value vanity_cockatrice_base32(value dest, value src) {
   return Val_unit;
 }
 
-CAMLprim value vanity_cockatrice_broadcast(value scratch, value s, intnat n, intnat pos) {
+CAMLprim value vanity_cockatrice_broadcast(value scratch, intnat pos, intnat length, intnat n) {
   char *scratch_c = Bytes_val(scratch);
-  char *s_c = Bytes_val(s);
-  int len = caml_string_length(s);
-
-  char *start = scratch_c + pos;
-
-  scratch_c[pos++] = ';';
-  scratch_c[pos++] = 'S';
-  scratch_c[pos++] = 'B';
-  scratch_c[pos++] = ':';
-
-  memcpy(scratch_c + pos, s_c, len);
-  pos += len;
+  char *start = scratch_c + pos - 2*(length + 4);
 
   char *write = scratch_c + pos;
-  __asm__ __volatile__ ( "rep movsb" : "+D" (write) : "S" (start), "c" ((n - 1)*(len + 4)) : "memory" );
+  __asm__ __volatile__ ( "rep movsb" : "+D" (write) : "S" (start), "c" ((n - 2)*(length + 4)) : "memory" );
 
   return Val_int(write - scratch_c);
 }
